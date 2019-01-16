@@ -1,0 +1,370 @@
+---
+title: "Project Analysis"
+author: "Brandon Domash"
+date: "12/6/2018"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document:
+    fig_caption: yes
+---
+
+```{r,echo=FALSE}
+qb = read.csv("QB Merged Data.csv")
+qb$X = NULL
+```
+###Abstract
+
+###ntroduction
+The data for this analysis contains stats for 34 Quarterbacks through 10 weeks of play of the 2017 NFL season. The quarterbacks contained in this dataset are the QBs who have thrown enough passes to be qualified for the NFL's passing leader title (in this case, that means QBs who have attempted at least 150 passes at this point in the season). The features included for the dataset are most of the commonly used statistics for analyzing quarterback play. For those not familiar with football, a quarterback can help his team by either throwing the ball or running the ball. Quarterbacks can hurt their team by either turning the ball over or taking a sack. Thus, the features can generally be grouped into four groups: 
+* stats relating to a quarterback's passing (ie passing yards)
+* stats relating to a QB's rushing (ie rushing yards)
+* stats relating to a QB's turnovers and negative plays (ie interceptions)
+* stats relating to a QB's general ability (ie winning percentage, quarterback rating)
+
+One feature that is also included in the dataset but does not belong to any of these categories is the Quarterback's age. The data comes from www.pro-football-reference.com. There are a total of 34 QBs and 16 variables for each QB.
+
+##Goals
+There are a few goals of the following analysis.
+* How does a quarterback's age relate to his performance. I am particularly interested if QB's change their style of play over time, or get better/worse as they gain more experience in the NFL.
+* Can we describe a QB's play with fewer statistics. There are so many stats to evaluate quarterback play, it would be a lot simplier if there were a few stats that people's could use to describe their favorite quarterback.
+* Does the statistic Total QBR accurately measure a quarterback's performance? The Total QBR statistic was created by ESPN in 2011 as a measure of performance of quarterbacks in American football, based on the quarterback's "expected points added" for each play. The calculations for this stat are rather convoluted and intricate, and thus many people are skeptical whether or not this stat bears any significane. With this analysis, we aim to see if this stat is indicitive of a QB's overall play.
+* Are there subgroups and/or tiers of quarterbacks in the NFL? This topic probably accounts for the largest percent of discourse for NFL fans and analysts alike. Specifically, people love to discuss which quarterbacks are "elite". We hope to answer this questions by seeing which quarterbacks can be grouped together.
+* How are Super Bowl winning quarterbacks different from the non-superbowl winning QBs
+
+##Main Results
+To analyse how a quarterback's age relates to his performance, we first explore the data by breaking the data into 3 groups: "old quarterbacks", that is quarterbacks aged and over, which is a common age at which where analysts begin to question if a quarterback is past their prime, "young quarterbacks", which are quarterbacks 25 and under, who are still relatively unproven or are still in their first contract, and "prime quarterbacks", which are the quarterbacks in between these ages, who should still be in the prime of their career. We first compare the three subsets of quarterbacks. 
+```{r,echo=FALSE,fig.cap="Quarterback Average Stats by Age",echo=FALSE,fig_caption: yes}
+print("Old QBs")
+round(colMeans(subset(qb,Age>30)[,-c(1,2)]),2)
+
+print("Prime QBs")
+round(colMeans(subset(qb,Age>25 & Age<=30)[,-c(1,2)]),2)
+
+print("Young QBs")
+round(colMeans(subset(qb,Age<=25)[,-c(1,2)]),2)
+```
+
+  By figure 1, it is extremely evident just by subsetting the data how clear a distinction there is bewteen old QBs and young QBs. Old QBs have the highest average in nearly every positive statistic, and the lowest average in nearly every negative statistic. However, we are still interested in how age and other variables are related. We first see how age related to the amount of yards the quarterback throws for and the percentage of passes he completes.  
+```{r,echo=FALSE,fig.cap="\\label{fig:figs}plotting example"}
+library("lattice")
+plot(xyplot(Yds ~ Cmp.PCT | cut(Age,c(20,25,30,41)), data=qb,layout=c(3,1)))
+```
+  The difference in distribution amongst the 3 age groups is clear. Young QBs have much lower completion percentage and yards passing than the other 2 groups, whereas the middle group have some QBs low in yards as well, and the oldest group has only QBs high in both yards and completion percentage. However, these are not the only passing statistics for a quarterback. To get a better idea of how age relates to passing in total, we look at Figure 3 below, which shows the how age is related to each of passing statistic.  
+```{r,fig.cap="Age vs Passings Stats",echo=FALSE,message=FALSE}
+library(MVA)
+passing = c("Age","Cmp.PCT","Yds","TD","First.DownPCT","Passes20Yd")
+pairs(qb[,passing],
+panel=function(x,y,...){
+  #text(x,y,abbreviate(qb$Player),cex=1,col="red")
+  bvbox(cbind(x,y),add=TRUE)
+})
+```
+  The first column shows the relationship between age and each other variable. Each of these variables are measured such that a higher amount is a positive to their team, and we see a positive, rather linear relationship between each of these variables and the age of the quarterback. Thus, quarterbacks who are older seem to have more passing ability than younger quarterbacks. The one interesting thing to note is the outlier in the TD vs Age plot, which is plotted below in figure 4.
+```{r,fig.cap="Touchdowns vs Age",echo=FALSE}
+library(MVA)
+x = qb[, c("Age","TD")]
+lab <- c("Patrick Mahomes")
+outliers <- match(lab,qb$Player)
+
+bvbox(x,xlab='Age',y='Touchdowns')
+text(x$Age[outliers],x$TD[outliers],labels=abbreviate(lab),cex=1,
+     pos=c(2))
+
+```
+  It is also clearly apparent that there is a positive correlation between the amount of touchdowns a quarterback has and their age. The one quarterback of note here is Patrick Mahomes, the quarterback of the Kansas City Chiefs. The second year, 23 year old quarterback has taken the league by storm this year, and is one of the candidates to win MVP. Having so many touchdowns for a quarterback that young is very rare, as seen by the data, which is a large factor into why he is viewed as the most valuable player to many.  
+
+  While older quarterbacks tend to have higher amounts of positive passings stats, this does not take the negative passing plays into account. Interceptions one of the main indicators of bad throws for a quarterback. We thus inspect how a quarterback's touchdowns relate to their interceptions, with a focus on a quarterback's age. This relationship is shown in figure 5 below, where the color of each point corresponds to that quarterback's age.  
+```{r,fig.cap="Touchdowns vs Interceptions, by Age",echo=FALSE, message = FALSE}
+library(tidyverse)
+ggplot(data=qb) + 
+  geom_point(mapping=aes(x=Int,y=TD,color=Age)) +
+  scale_color_gradient(low="blue", high="red")
+```
+  Suprisingly, there is a positive relationship between the amount of touchdowns thrown and the amount of interceptions throw for quarterbacks. However, the upper left region, indicating quarterbacks that have thrown many touchdowns and few interceptions, appears to be dominated by older quarterbacks. This supports the hypothesis that older quarterbacks are better passers.  
+  However, passing isn't the only part of the game. Quarterbacks can also help their team by running the ball, and the ability to run can add another dimension to a team's offense. Thus, we should see if there is a relationship between a quarterback's running ability and age. Below is another dispay comparing a quarterback's running stats to his age.  
+```{r,fig.cap="Age vs Rushing Stats",echo=FALSE}
+library(MVA)
+rushing = c("Age","Rush.Att","Rush.Yds","Rush.TD")
+pairs(qb[,rushing],
+panel=function(x,y,...){
+  #text(x,y,abbreviate(qb$Player),cex=1,col="red")
+  bvbox(cbind(x,y),add=TRUE)
+})
+```
+  Here, we see the opposite results as with the passing stats, as there seems to be a negative relationship between the amount of times and yards a quarterback runs for, while there is not strong relationship between rushing touchdowns and age. This could be explained as older quarterbacks are likely well beyond their athletic prime, and thus rely on their throwing abilities rather than their running abilities. The one major outlier in the age plots is in the Age vs Rushing attempts plot, in which the outlier is Carolina Panther's QB Cam Newton, who is commonly known throughout the league as a "running QB". It will be interesting to see if as he gets older, his volume of rushes will decrease. Based on the data, my hypothesis is that it will.
+
+  Finally, we look at a player's passing yards vs rushing yards to get an overall idea of "passing QBs" vs "Running QBs".  
+```{r,fig.cap="Passing vs Rushing Stats",echo=FALSE}
+plot(Yds~Rush.Yds,data=qb, pch=10,
+     ylab = "Passing Yards", xlab = "Rushing Yards",main="Passing Yards vs Rushing Yards, with respect to Age")
+with(qb,symbols(Rush.Yds,Yds,circles = Age, inches = .2, add=T))
+```
+  The data once again supports that younger QBs tend to run the ball for more yards and throw the ball for fewer yards than older qbs, as seen by the size of the circles for each data-point. We can confidently say that older quarterbacks tend to have more positive throwing plays, fewer negative throwing mistakes, and a more lackluster ability to run the ball.  
+
+  Next we seek to reduce dimensionality in order to describe quarterbacks by fewer than 16 variables. To do so, we use principal component analysis in order to find linear combiations of the variables that account fot the greatest amount of variation in the data. Because the scale of each feature of the data is much different, we must use the correlation matrix rather than the covariance matrix in computing the principal components
+```{r,echo=FALSE}
+pca = princomp(qb[,-c(1)],cor=T)
+summary(pca,loadings=T)
+```
+  Unfortunately, only 38% of the variance in the data can be described by its first principal component. However, it is intersting to note that the first principal component disregards all rushing data for the quarterbacks, as well as all data on negative plays (interceptions, fumbles and sacks). In order to get close to 70% of the variation in the data, 3 principal components are necessary.  
+```{r,echo=FALSE}
+library(MVA)
+qb2 = qb
+qb2$Age2 = factor(cut(qb$Age,c(20,25,30,41)),labels = c("Young","Middle","Old"))
+pairs(pca$scores[,1:3],
+panel=function(x,y,...){
+  text(x,y,abbreviate(qb$Player),cex=1,col="red")
+  #bvbox(cbind(x,y),add=TRUE)
+})
+```
+  From looking at component scores 1 and 2, low amounts of component one seem to generally correspond to passing ability, as we see some of the league's worst passers with low amounts of component 1, such as Brock Osweiler, Josh Allen and Sam Darnold. Low amounts of component 2 seem to correspond to how good of a runner a QB is, as notable running QBs such as Cam Newton and Dak Prescott are near the bottom in the second component. It is hard to assess exactly what the third principal component corresponds to based on the loadings and the graphs.  
+  Another way we can seek to reduce dimensionality is to reduce each statistical category into principal components. That is, have principal components for throwing varibles, running variables, and turnover variables. Below are our passing variables, which are highly correlated with each other.  
+```{r,echo=FALSE}
+passing = c("Cmp.PCT","Yds","TD","First.DownPCT","Passes20Yd")
+library(reshape2)
+cormat = round(cor(qb[,passing]),2)
+cormat[upper.tri(cormat)] = NA
+head(cormat)
+melted_cormat = melt(cormat)
+ggplot(data=melted_cormat,aes(x=Var1,y=Var2,fill=value))+
+  geom_tile(color='white')+
+  geom_text(aes(Var1,Var2,label=value),color='black',size=4)+
+  scale_fill_gradient2(low="blue",high='red',mid = 'white',midpoint=0,limit=c(-1,1),space='Lab')
+```
+  We seek a way to reduce these passing variables into one or two variables. Principal component analysis tells us as follows:  
+```{r,echo=FALSE}
+passing_pca = princomp(qb[,passing],cor = T)
+summary(passing_pca,loadings = T)
+```
+
+  Almost 75% of the variation can be explained using one principal component! A biplot of this data also shed some insight into how QBs relate to each other in terms of passing, as the distance between each point represents the distance between the units, as well as the correlation between the varibles.   
+```{r,echo=FALSE}
+biplot(passing_pca, col=c("gray","black"))
+
+```
+  Clearly, Passes over 20 yards and passing Yards are highly correlated, as are first down percentage and completion percentage. We also see that quarterback 28, Patrick Mahomes, is particularly unique in terms of his long passes and passing yards. This is an interesting contrast from QB 16, Drew Brees, who excels in completion percentage and first down percentage. Funny enough, these are the two QBs who are the top 2 candidates to win MVP this season.   
+
+  Now, looking at the running variables also shows that they are highly correlated, meaning the first principal component will likely account for much of the variation.  
+```{r,echo=FALSE}
+library(reshape2)
+rushing = c("Rush.Att","Rush.Yds","Rush.TD")
+cormat = round(cor(qb[,rushing]),2)
+cormat[upper.tri(cormat)] = NA
+head(cormat)
+melted_cormat = melt(cormat)
+ggplot(data=melted_cormat,aes(x=Var1,y=Var2,fill=value))+
+  geom_tile(color='white')+
+  geom_text(aes(Var1,Var2,label=value),color='black',size=4)+
+  scale_fill_gradient2(low="blue",high='red',mid = 'white',midpoint=0,limit=c(-1,1),space='Lab')
+
+rushing_pca = princomp(qb[,rushing],cor = T)
+summary(rushing_pca,loadings = T)
+```
+  We are able to reduce rushing statistics from 3 dimensions to 1 with still accounting for over 80% of the variation in the data. Finally, we look at the features related to negative plays for each quarterback  
+
+```{r,echo=FALSE}
+library(reshape2)
+negative = c("Sacks","Int","Fumbles")
+cormat = round(cor(qb[,negative]),2)
+cormat[upper.tri(cormat)] = NA
+head(cormat)
+melted_cormat = melt(cormat)
+ggplot(data=melted_cormat,aes(x=Var1,y=Var2,fill=value))+
+  geom_tile(color='white')+
+  geom_text(aes(Var1,Var2,label=value),color='black',size=4)+
+  scale_fill_gradient2(low="blue",high='red',mid = 'white',midpoint=0,limit=c(-1,1),space='Lab')
+
+negative_pca = princomp(qb[,negative],cor = T)
+summary(negative_pca,loadings = T)
+```
+Here we see that negative plays are not that correlated, thus only 55% of the variation is explained with one principal component. We can ignore that principal component and can graph the two principal components for passing stats and rushing stats to help conceptualize QBs by style.
+```{r}
+plot(passing_pca$scores[,1],rushing_pca$scores[,1],xlab="Passing PCA",ylab="Running PCA",type='n')
+#bvbox(passing_pca$scores[,1],rushing_pca$scores[,1],xlab='Passing Vars',y='Running Vars')
+text(passing_pca$scores[,1],rushing_pca$scores[,1],labels=abbreviate(qb$Player),cex=.75)
+```
+  This gives us a good idea of which QBs are good passers vs which QBs are good runners, while accounting for most of the variation in both sets of variables. The two outliers we saw earlier are shown clearly here: Cam Newton for his running abilities and Patrick Mahomes for his passing abilities. While there are not clearly defined clusters by this graph, you can compare which QB's styles are relatively similar. For example, Josh Rosen and Brock Osweiler, in the lower left corner, both lack passing and running abilities. We also see how terrible of a passer Josh Allen has been this year.
+
+  
+  Next, we seek if the derived principal component scores relate to the measures of quarterback play, such as Total QBR and QB rating. As a reminder, Total QBR is a stat created by ESPN using play-by-play data and complex modeling in order to quantify the total value of a quarterback, between 0 and 100. QB Rating, or passer rating, is a simple formula using a transformation of basic stats to come up with a number, 0 to 158.3, that rates how good of a passer a QB was in a particular game or season. In theory, the principla component scores should measure both of these statistics fairly well. Because a high QBR and QB Rating indicates a good performance, we need to make sure that for all of the variables, a higher value is indicitive of a "good" performance. Thus, we must first transform three statistics: fumbles, interceptions, and sacks, as a quarterback wants low values for each of these. We will also be computing these principal component scores without QBR and QB.Rating.  
+```{r,echo=FALSE}
+qb2 = qb
+qb2$Int = with(qb2, max(Int)-Int)
+qb2$Sacks = with(qb2, max(Sacks)-Sacks)
+qb2$Fumbles = with(qb2, max(Fumbles)-Fumbles)
+
+row.names(qb2) = abbreviate(qb2$Player)
+qb2 = qb2[,-c(1,2,15,16)]
+qbr_pca = prcomp(qb2,scale=TRUE)
+summary(qbr_pca)
+qbr_pca$rotation[,1]
+```
+  Here we see once again that not much of the variation is explained by the first principal component. Regardless, the variables with the most weight are winning percentage, completion percentage, yards, first down percentage, touchdowns, and long passes. We can compute the first principal component score for each quarterback by taking the linear combination of the explanitory variables with the weights of the first principal component analysis, and then see how it relates to both QBR and QB rating. The correlation between PC1 and Total QBR is `r round(cor(qb$QBR,qbr_pca$x[,1]),2)`. The correlation between PC1 and QB rating is `r round(cor(qb$QB.Rating,qbr_pca$x[,1]),2)`. Both are very high, meaning the first principal component of these throwing, running, and turnover stats are a fairly accurate measure of QB performance, even though the first component accounts for a relatively low amount of the total variation in the data.  
+```{r,eval=T,echo=F}
+qb2 = qb
+qb2$Int = with(qb2, max(Int)-Int)
+qb2$Sacks = with(qb2, max(Sacks)-Sacks)
+qb2$Fumbles = with(qb2, max(Fumbles)-Fumbles)
+
+row.names(qb2) = abbreviate(qb2$Player)
+qb2 = qb2[,-c(1,2,15,16)]
+qbr_pca = prcomp(qb2,scale=TRUE)
+
+par(mfrow=c(1,2))
+plot(qb$QBR,qbr_pca$x[,1],main="PC vs Total QBR",ylab="PC1 Score",xlab="Total QBR")
+abline(lm(qbr_pca$x[,1]~qb$QBR),col='red',lty=2)
+
+plot(qb$QB.Rating,qbr_pca$x[,1],main="PC vs QB Rating",ylab="PC1 Score",xlab="QB Rating")
+abline(lm(qbr_pca$x[,1]~qb$QB.Rating),col='red',lty=2)
+
+m1 = lm(qbr_pca$x[,1]~qb$QBR)
+sort(abs(m1$residuals),decreasing = T)
+
+m2 = lm(qbr_pca$x[,1]~qb$QB.Rating)
+sort(abs(m2$residuals),decreasing = T)
+
+```
+  After analyzing the residuals, the highest residuals for the QBR plot includes Jameis Winston, Josh Allen, and Cam Newton, all of whom we saw to be rushing quarterbacks, stylistically. Amongst the highest residuals for the QB Rating plot is Ben Roethlisberger and Sam Darnold, two of the players with the most interceptions. Amongst looking further into the calculations for QBR and QB Rating, QBR takes all plays into account (including rushing plays), while QB Rating only takes passing plays (including interceptions). Thus is makes sense why some players for both plots were off; the first principal component does not take interceptions or rushing plays much into account.  
+
+  Finally, we look to see if there are any patterns of super bowl winners based on the first two principal components. Figure below shows each quarterback plotted by his first and second PCA score, where QBs that have won a superbowl are marked with a red circle, and QBs that have not are marked with a blue X. While there is not a huge pattern, notice how each of the super bowl winning QBs are in the top half of the plot, and seem to be on the left side. Based on the construction of the first two PCAs, this indicates that QBs with better passing stats and worse rushing stats are the QBs that have won Super Bowls. Theses quarterbacks are typically known as "pocket passes", as the quartbacks stay in their throwing "pocket" instead of trying to rush the ball. Based on this analysis, teams looking for a quarterback that can win them a super bowl should probably look at the "pocket passer" type of quarterback.  
+```{r,echo=F}
+qb2 = qb
+sb = qb2$SB
+rownames(qb2) = abbreviate(qb2$Player)
+x = qb2[,-c(1,17)]
+corr <- cor(x)
+eig <- eigen(corr)
+v <- scale(x)
+par(cex=1.5)
+z1 <- v %*% eig$vector[,1]
+z2 <- v %*% eig$vector[,2]
+plot(z1,z2,xlab="PC1",ylab="PC2",type="n") 
+group <- sb == 1 
+points(z1[group],z2[group],pch=1,col="red")
+points(z1[!group],z2[!group],pch=4,col="blue")
+legend("bottomleft",legend=c("Super Bowl Winner","No Super Bowl"),cex=.5,
+col=c("red","blue"),pch=c(1,4))
+```
+  Next we wish to cluster Quarterbacks in order to find "tiers" of quarterback skill or quarterback type. We seek to cluster the data using the hierarchical method; k-means will give us different clusters each time depending on the starting point, and the point of this analysis is to find definite tiers. However, this method does have the drawback that we must pick the "correct" number of clusters. In deciding this, we look at the dendogram for complete linkage, as we want to avoid chaining clusters, where observations are added to a cluster due to being close to one single observation, rather than the cluster as a whole. This is the case with single linkage, which does not give a useful description of the data, seen in the dendogram below. Rather, we want compact clusters as seen in the dendogram for complete linkage.For comparisons sake, the dendograms for single, complete, and average linkage are all below.
+```{r,echo=F}
+qb_dist = dist(qb[,-1])
+plot(cs <- hclust(qb_dist,method = "single"))
+
+plot(cc <- hclust(qb_dist,method = "complete"))
+plot(ca <- hclust(qb_dist,method = "average"))
+```
+  Now we run into the issue of choosing the "correct" amount of clusters, that is, where should we cut the dendogram? One method of determining this could be to look at how many groups a model-based clustering technique chooses, such as maximum-likelihood based clustering. However, upon further analysis, the model-based clustering chooses only 1 cluster, which does not help.
+```{r,echo=F}
+##Mclust
+library(mclust)
+mclus <- Mclust(qb[,-1])
+mclus$classification
+```
+  Instead we simply look at the dendogram and see that there are three fairly equal sized clusters at a height close to 750. Below we see how the 34 quarterbacks are clusters  
+```{r,echo=F}
+qb_dist = dist(qb[,-1])
+cc <- hclust(qb_dist,method = "complete")
+lab = cutree(cc,k = 3);
+qb3 = qb
+qb3$Cluster = lab
+print("Cluster 1")
+as.character(unlist(qb3[qb3$Cluster==1,"Player"]))
+print("Cluster 2")
+as.character(unlist(qb3[qb3$Cluster==2,"Player"]))
+print("Cluster 3")
+as.character(unlist(qb3[qb3$Cluster==3,"Player"]))
+```
+  Below is a plot of each quarterback listed by their cluster, with the super bowl winning quarterbacks shown in red.  Cluster 3 contains the quarterbacks who are struggling the most, compromised mostly of young quarterbacks or QBs who are on the verge of losing their starting job. And cluster 2 contains the middle of the pack Quarterbacks, most of which have seen some levels of success in the NFL, but not as much as the top tier of quarterbacks. 
+```{r,echo=F}
+qb_dist = dist(qb[,-1])
+cc <- hclust(qb_dist,method = "complete")
+clus_pca = princomp(qb[,-1],cor=TRUE)
+xlim = range(clus_pca$scores[,1])
+
+par(mfrow = c(1,1))
+group <- qb$SB == 1 
+lab = cutree(cc,k = 3);
+qb3 = qb
+
+plot(clus_pca$scores[,1:2],type='n',xlim=xlim,ylim=xlim)
+text(clus_pca$scores[,1][group],clus_pca$scores[,2][group],labels=lab[group],cex=.8,col='red')
+text(clus_pca$scores[,1][!group],clus_pca$scores[,2][!group],labels=lab[!group],cex=.8,col='black')
+legend("topleft",legend=c("Super Bowl Winner","No Super Bowl"),cex=.75,
+       col=c("red","black"),pch='|')
+```
+  Cluster 1 is full of nearly every quarterback in the dataset that has won a Super Bowl. A reminder that principal component one generally passing ability helps us contextualize that cluster 1 is full of the NFL's best passing QBs, in terms of both passing ability and the achievement of winning a Super Bowl. In addition, most quarterbacks in cluster 1 have higher amounts of PC2, indicating that they are not quarterbacks that run the ball.  
+  Next, we look at the clusters by the quarterback's team's record. QBs with more wins than losses are now colored in red in the figure below.
+```{r,echo=F}
+qb_dist = dist(qb[,-1])
+clus_pca = princomp(qb[,-1],cor=TRUE)
+cc <- hclust(qb_dist,method = "complete")
+group = qb$W.PCT >.5
+lab = cutree(cc,k = 3)
+xlim = range(clus_pca$scores[,1])
+plot(clus_pca$scores[,1:2],type='n',xlim=xlim,ylim=xlim)
+text(clus_pca$scores[,1][group],clus_pca$scores[,2][group],labels=lab[group],cex=.8,col='red')
+text(clus_pca$scores[,1][!group],clus_pca$scores[,2][!group],labels=lab[!group],cex=.8,col='black')
+legend("topleft",legend=c("Team is over .500","Team is .500 or below"),cex=.65,
+       col=c("red","black"),pch='|')
+```
+  Now we see every QB on a winning team is in either cluster 1 and 2. Cluster 2 has more quarterbacks with low amounts of PC2, or a high running ability. This also tells us about cluster 3, as cluster 3 contains only quarterbacks who have a losing record. Thus, there is a clear hierarchical ranking of the 3 clusters. Cluster 1 contains the top-tier QBs that can win a team the Super Bowl. These quarterbacks all tend to be of the "pocket passer" type. Cluster 2 contains the middle-of-the-road quarterbacks, that can still lead a team to successful, and perhaps the playoffs. These quarterbacks also are generally more mobile than the top-tier quartebacks. And cluster 3 contains the bottom-tier quarterbacks, who likely will not be able to lead a team to the playoffs.
+  
+  Finally, to conceptualize how age is distributed by tier, we look at the clusters colored by age. As we did in earlier analysis, age is broken into 3 categories: young QBs (25 and under), middle QBs (26-30), and veteran QBs (31+). 
+```{r,echo=F}
+#Age shown of clusters
+qb_dist = dist(qb[,-1])
+clus_pca = princomp(qb[,-1],cor=TRUE)
+cc <- hclust(qb_dist,method = "complete")
+lab = cutree(cc,k = 3)
+qb2 = qb
+qb2$Age2 = factor(cut(qb$Age,c(20,25,30,41)),labels = c("Young","Middle","Old"))
+group <- qb2$Age2 
+plot(clus_pca$scores[,1:2],type='n',xlim=xlim,ylim=xlim)
+text(clus_pca$scores[,1][group=="Young"],clus_pca$scores[,2][group=="Young"],labels = lab[group=="Young"],cex=.8,col='red')
+text(clus_pca$scores[,1][group=="Middle"],clus_pca$scores[,2][group=="Middle"],labels=lab[group=="Middle"],cex=.8,col='green')
+text(clus_pca$scores[,1][group=="Old"],clus_pca$scores[,2][group=="Old"],labels=lab[group=="Old"],cex=.8,col='blue')
+legend("topleft",legend=c("Young","Middle","Old"),cex=.6,
+       col=c("red","green","blue"),pch='|')
+
+```
+  
+We see that veteran QBs exclusively belong to tiers 1 and 2. Young QBs dominate tier 3, signifying that these QBs might need time to develop and improve their skills before they will be able to lead a team to success. We also see some young quarterbacks in the middle and upper tiers, signifying that these QBs are up-and-coming and will be successful in the league for years to come. In addition, we see a few middle-aged (in NFL terms) quarterbacks in tier 3, which signifies that those quarterbacks might soon be out of the league unless their play improves.
+```{r,eval=F,echo=F}
+#cluster PCAs -> doesn't reduce variance
+lab = cutree(cc,k = 3)
+c1 = qb[lab==1,-1]
+p1 = prcomp(c1,scale. = T)
+summary(p1)
+
+c2 = qb[lab==2,-1]
+p2 = prcomp(c1,scale. = T)
+summary(p2)
+
+c3 = qb[lab==3,-1]
+p3 = prcomp(c1,scale. = T)
+summary(p3)
+```
+  
+The final technique we use to analyze the data is multi-dimensional scaling, to get a clear visualization the the proximity of quarterbacks in 2 dimensions. The one weakness of this method is that the choice of distance equation is not clear. In this case, we simply use eucleudian distances.
+
+```{r,echo=F}
+#MDS
+D = dist(qb[,-1])
+?cmdscale
+fit = cmdscale(D,eig=T,k=2)
+x <- fit$points[, 1]
+y <- fit$points[, 2]
+group = qb$SB ==1
+plot(x, y,type = "n")
+text(x[group],y[group],labels = abbreviate(qb$Player)[group],col='red',cex=.5)
+text(x[!group],y[!group],labels = abbreviate(qb$Player)[!group],col='blue',cex=.5)
+
+legend("topleft",legend=c("Super Bowl Winners","No Super Bowl"),cex=.75,
+       col=c("blue","red"),pch='|')
+
+```
+We have highlighted super bowl winners to see what quarterbacks are playing like the former super bowl winners. As you can see, quarterbacks like Phillip Rivers ans Andrew Luck (lower), are very close in proximity to a cluster of 3 former super bowl winners. Perhaps this indicates that these QBs are primed to win a super bowl at some point in the near future.
+
+###Conclusions
