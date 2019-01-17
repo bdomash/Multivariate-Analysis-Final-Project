@@ -11,4 +11,4 @@ Analyses included in the project are:
 
 -Cluster analysis
 
-The Rcode for the final project can be found in Project.rmd, and the report which does not include the rcode can be found in the Final Project pdf 
+The Rcode for the final project can be found in Project.rmd, and the report which does not include the rcode can be found in the Final Project pdf. Some initial data-wrangling can be found in the QB Data Merge.r file.
